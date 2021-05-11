@@ -1,0 +1,6 @@
+package bin
+
+modules = Data.Bin
+
+depends = prelude, base, contrib
+sourcedir = "src"
