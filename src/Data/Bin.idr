@@ -87,6 +87,7 @@ doDecEqInner (O a     v        ) (O b     w      ) =
 DecEq Bin where
   decEq = doDecEqInner
 
+public export
 binIsZero : Bin -> Bool
 binIsZero BNil = True
 binIsZero (O _ _) = False
@@ -111,6 +112,7 @@ binInc BNil = O Z BNil
 binInc (O Z BNil) = O (S Z) BNil
 binInc (O a v) = flipFromLeft (O a v)
 
+public export
 binDec : Bin -> Bin
 binDec BNil = BNil
 binDec (O Z BNil) = BNil
@@ -672,6 +674,7 @@ prove2XBin2NatFlipFromLeftVEqBin2NatOneMoreV (O Z (O a v)) =
   rewrite sym (add2NEqNP2 (plus (plus (bin2Nat (O a v)) (bin2Nat (O a v))) (plus (bin2Nat (O a v)) (bin2Nat (O a v)))) (plus (plus (bin2Nat (O a v)) (bin2Nat (O a v))) (plus (bin2Nat (O a v)) (bin2Nat (O a v))))) in
   Refl
 
+public export
 testBin2Nat : (b : Bin) -> S (bin2Nat b) = bin2Nat (binInc b)
 testBin2Nat BNil = Refl
 testBin2Nat (O Z BNil) = Refl
@@ -687,6 +690,7 @@ testBin2Nat (O Z (O (S a) v)) =
 testBin2Nat (O (S a) BNil) = Refl
 testBin2Nat (O (S a) (O b v)) = Refl
 
+public export
 sAISBin2NatBinIncNat2BinA : (a : Nat) -> S a = bin2Nat (binInc (nat2Bin a))
 sAISBin2NatBinIncNat2BinA Z = Refl
 sAISBin2NatBinIncNat2BinA (S a) =
@@ -694,6 +698,7 @@ sAISBin2NatBinIncNat2BinA (S a) =
   rewrite sAISBin2NatBinIncNat2BinA a in
   Refl
 
+public export
 bin2NatIsReflexiveWithNat2Bin : (a : Nat) -> a = (bin2Nat (nat2Bin a))
 bin2NatIsReflexiveWithNat2Bin Z = Refl
 bin2NatIsReflexiveWithNat2Bin (S a) = 
@@ -705,6 +710,7 @@ showBinInternal BNil = ""
 showBinInternal (O Z v) = (assert_total (showBinInternal v)) ++ "1"
 showBinInternal (O (S a) v) = (assert_total (showBinInternal (O a v))) ++ "0"
 
+public export
 showBin : Bin -> String
 showBin BNil = "0"
 showBin x = showBinInternal x
@@ -713,12 +719,15 @@ public export
 implementation Show Bin where
   show = showBin
 
+public export
 Cast Bin Nat where
   cast = bin2Nat
 
+public export
 Cast Nat Bin where
   cast = nat2Bin
 
+public export
 binEq : Bin -> Bin -> Bool
 binEq BNil BNil = True
 binEq BNil (O b y) = False
@@ -728,12 +737,14 @@ binEq (O Z x) (O (S b) y) = False
 binEq (O (S a) x) (O Z y) = False
 binEq (O (S a) x) (O (S b) y) = assert_total (binEq (O a x) (O b y))
 
+public export
 natEq : Nat -> Nat -> Bool
 natEq Z Z = True
 natEq (S n) Z = False
 natEq Z (S n) = False
 natEq (S n) (S m) = natEq n m
 
+public export
 binEqAA : (a : Bin) -> binEq a a = True
 binEqAA BNil =
   Refl
@@ -749,3 +760,4 @@ binEqAA (O (S a) v) =
 
 Eq Bin where
   (==) = binEq
+
