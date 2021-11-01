@@ -40,6 +40,9 @@ public export data Bin = O Nat Bin | BNil
 O_injective : (O a v = O b w) -> (a = b, v = w)
 O_injective Refl = (Refl, Refl)
 
+O_bijective : (a = b) -> (v = w) -> (O a v = O b w)
+O_bijective Refl Refl = Refl
+
 total bnilNotO : (a : Nat) -> (b : Bin) -> (BNil = O a v) -> Void
 bnilNotO a b p impossible
 
@@ -120,7 +123,7 @@ binDec (O Z (O a b)) = (O (S a) b)
 {-
   0001 -- -> 1110
 -}
-binDec (O (S a) b) = 
+binDec (O (S a) b) =
   assert_total (O Z (binDec (O a b)))
 
 public export
@@ -134,7 +137,7 @@ nat2BinZIsBNil = Refl
 public export
 bin2Nat : Bin -> Nat
 bin2Nat BNil = Z
-bin2Nat (O Z v) = 
+bin2Nat (O Z v) =
   let m1 = assert_total (bin2Nat v) in
   let m2 = plus m1 m1 in
   S m2
@@ -276,22 +279,13 @@ oneIsNotTwo p impossible
 twoIsNotAPlus3 : {a : Nat} -> (S (S Z) = S (S (S a))) -> Void
 twoIsNotAPlus3 Refl impossible
 
-sPs : (a : Nat) -> (b : Nat) -> (a = b) -> (S a = S b)
-sPs Z Z p = Refl
-sPs Z (S b) p = absurd (zNotS {a = b} p)
-sPs (S a) Z p = absurd (sNotZ {a = a} p)
-sPs (S a) (S b) p with (saEqSb2 (S a) (S b) (Yes p))
-  sPs (S a1) (S b1) p | Yes pe = pe
-  sPs (S Z) (S Z) p | No contra = Refl
-  sPs (S Z) (S (S b1)) p | No contra impossible
-  sPs (S (S a1)) (S Z) p | No contra impossible
-  sPs (S (S a1)) (S (S b1)) p | No contra with (saEqSb2 (S (S a1)) (S (S b1)) (Yes p))
-    sPs (S (S a1)) (S (S b1)) p | No contra | Yes p1 = absurd (contra p1)
-    sPs (S (S a1)) (S (S b1)) p | No contra | No q1 =
-      let
-        iwant = sPs (S (S a1)) (S (S b1)) p
-      in
-      absurd (assert_total (contra iwant))
+nextS : (a : Nat) -> (b : Nat) -> a = b -> S a = S b
+nextS Z Z p = Refl
+nextS Z (S y) p = absurd (zNotS p)
+nextS (S x) Z p = absurd (sNotZ p)
+nextS (S x) (S y) p =
+  rewrite p in
+  Refl
 
 eqs : (a : Nat) -> (b : Nat) -> (S a = S b) -> (a = b)
 eqs Z Z p = Refl
@@ -310,7 +304,7 @@ eqs (S a1) (S b1) p with (decEq a1 b1)
     eqs (S (S a1)) (S (S b1)) p | No c1 | Yes ppp =
       let
         cproof : (S a1 = S b1)
-        cproof = sPs a1 b1 ppp
+        cproof = nextS a1 b1 ppp
       in
       absurd (c1 cproof)
     eqs (S (S a1)) (S (S b1)) p | No c1 | No qqq =
@@ -701,7 +695,7 @@ sAISBin2NatBinIncNat2BinA (S a) =
 public export
 bin2NatIsReflexiveWithNat2Bin : (a : Nat) -> a = (bin2Nat (nat2Bin a))
 bin2NatIsReflexiveWithNat2Bin Z = Refl
-bin2NatIsReflexiveWithNat2Bin (S a) = 
+bin2NatIsReflexiveWithNat2Bin (S a) =
   rewrite sAISBin2NatBinIncNat2BinA a in
   Refl
 
@@ -761,3 +755,934 @@ binEqAA (O (S a) v) =
 Eq Bin where
   (==) = binEq
 
+public export
+chop : Nat -> Bin -> Bin
+chop _ BNil = BNil
+chop Z (O _ _) = BNil
+chop (S n) (O Z v) = O Z (chop n v)
+chop (S n) (O (S m) v) = chop n (O m v)
+
+public export
+natOdd : Nat -> Nat
+natOdd Z = Z
+natOdd (S Z) = S Z
+natOdd (S (S n)) = natOdd n
+
+public export
+plusSNPlusSnIsSSn : (n : Nat) -> (S (n + (S n))) = S (S (n + n))
+plusSNPlusSnIsSSn Z = Refl
+plusSNPlusSnIsSSn (S m) =
+  rewrite add2NEqNP2 m (S m) in
+  Refl
+
+public export
+plusAAIsEven : (a : Nat) -> natOdd (a + a) = Z
+plusAAIsEven Z = Refl
+plusAAIsEven (S n) =
+  rewrite plusSNPlusSnIsSSn n in
+  rewrite plusAAIsEven n in
+  Refl
+
+public export
+aPlus2SameEvenness : (a : Nat) -> natOdd a = natOdd (S (S a))
+aPlus2SameEvenness Z = Refl
+aPlus2SameEvenness (S n) = Refl
+
+public export
+contradictionOdd : natOdd 0 = 1 -> Void
+contradictionOdd prf impossible
+
+public export
+onePlusOddIsEven : (q : Nat) -> natOdd q = S Z -> natOdd (S q) = Z
+onePlusOddIsEven Z prf = absurd (contradictionOdd prf)
+onePlusOddIsEven (S Z) prf = Refl
+onePlusOddIsEven (S (S o)) prf1 =
+  rewrite sym (onePlusOddIsEven o prf1) in
+  Refl
+
+public export
+contradictionEven : natOdd 1 = 0 -> Void
+contradictionEven prf impossible
+
+public export
+onePlusEvenIsOdd : (a : Nat) -> natOdd a = Z -> natOdd (S a) = S Z
+onePlusEvenIsOdd Z prf = Refl
+onePlusEvenIsOdd (S Z) prf = absurd (contradictionEven prf)
+onePlusEvenIsOdd (S (S o)) prf1 =
+  rewrite sym (onePlusEvenIsOdd o prf1) in
+  Refl
+
+public export
+chop0AnyIs0 : (v : Bin) -> bin2Nat (chop 0 v) = 0
+chop0AnyIs0 BNil = Refl
+chop0AnyIs0 (O x b) = Refl
+
+public export
+chop1IsOddIfBIsOdd : (b : Bin) -> bin2Nat (chop 1 b) = natOdd (bin2Nat b)
+chop1IsOddIfBIsOdd BNil = Refl
+chop1IsOddIfBIsOdd (O Z BNil) = Refl
+chop1IsOddIfBIsOdd (O Z v) =
+  let
+    b2nvIsEven : (natOdd ((bin2Nat v) + (bin2Nat v)) = Z)
+    b2nvIsEven =
+      rewrite plusAAIsEven (bin2Nat v) in
+      Refl
+
+    exprOdd : natOdd (S ((bin2Nat v) + (bin2Nat v))) = S Z
+    exprOdd =
+      rewrite onePlusEvenIsOdd ((bin2Nat v) + (bin2Nat v)) b2nvIsEven in
+      Refl
+  in
+  rewrite exprOdd in
+  rewrite chop0AnyIs0 v in
+  Refl
+chop1IsOddIfBIsOdd (O (S x) v) =
+  rewrite plusAAIsEven (bin2Nat (O x v)) in
+  Refl
+
+div2Nat : Nat -> Nat
+div2Nat Z = Z
+div2Nat (S Z) = Z
+div2Nat (S (S n)) = S (div2Nat n)
+
+pow2Nat : Nat -> Nat
+pow2Nat Z = S Z
+pow2Nat (S n) = (pow2Nat n) + (pow2Nat n)
+
+binShr : Bin -> Bin
+binShr BNil = BNil
+binShr (O Z x) = x
+binShr (O (S a) x) = O a x
+
+binOdd : Bin -> Nat
+binOdd BNil = Z
+binOdd (O Z _) = S Z
+binOdd (O (S a) x) = Z
+
+binOddEqNatOdd : (b : Bin) -> natOdd (bin2Nat b) = binOdd b
+binOddEqNatOdd BNil = Refl
+binOddEqNatOdd (O Z x) =
+  let
+    twiceBin2NatXIsEven : (natOdd ((bin2Nat x) + (bin2Nat x)) = 0)
+    twiceBin2NatXIsEven =
+      rewrite plusAAIsEven (bin2Nat x) in
+      Refl
+
+    exprOdd : natOdd (S (plus (bin2Nat x) (bin2Nat x))) = S Z
+    exprOdd =
+      rewrite onePlusEvenIsOdd ((bin2Nat x) + (bin2Nat x)) twiceBin2NatXIsEven in
+      Refl
+  in
+  exprOdd
+binOddEqNatOdd (O (S a) x) =
+  rewrite plusAAIsEven (bin2Nat (O a x)) in
+  Refl
+
+div2NatOnePlusAPAIsA : (a : Nat) -> div2Nat (S (a + a)) = a
+div2NatOnePlusAPAIsA Z = Refl
+div2NatOnePlusAPAIsA (S x) =
+  rewrite sym (add2NEqNP2 x x) in
+  rewrite div2NatOnePlusAPAIsA x in
+  Refl
+
+div2NatPlusAAIsA : (a : Nat) -> div2Nat (a + a) = a
+div2NatPlusAAIsA Z = Refl
+div2NatPlusAAIsA (S x) =
+  rewrite sym (add2NEqNP2 x x) in
+  rewrite div2NatPlusAAIsA x in
+  Refl
+
+public export
+plusOaxOaxIsOSax : (a : Nat) -> (x : Bin) -> bin2Nat (O (S a) x) = plus (bin2Nat (O a x)) (bin2Nat (O a x))
+plusOaxOaxIsOSax Z BNil = Refl
+plusOaxOaxIsOSax Z (O b v) = Refl
+plusOaxOaxIsOSax (S m) BNil = Refl
+plusOaxOaxIsOSax (S m) (O b v) = Refl
+
+oNotBNil : {b : Nat} -> {z : Bin} -> (O b z) = BNil -> Void
+oNotBNil {b = Z} {z = BNil} Refl impossible
+oNotBNil {b = (S v)} {z = BNil} Refl impossible
+oNotBNil {b = Z} {z = (O s t)} Refl impossible
+oNotBNil {b = (S v)} {z = (O s t)} Refl impossible
+
+bNilNotO : {b : Nat} -> {z : Bin} -> BNil = (O b z) -> Void
+bNilNotO {b = Z} {z = BNil} Refl impossible
+bNilNotO {b = (S v)} {z = BNil} Refl impossible
+bNilNotO {b = Z} {z = (O s t)} Refl impossible
+bNilNotO {b = (S v)} {z = (O s t)} Refl impossible
+
+plusXXEqZ : (x : Nat) -> plus x x = 0 -> x = 0
+plusXXEqZ Z p = Refl
+plusXXEqZ (S a) p = absurd (sNotZ p)
+
+zEqPlusXX : (x : Nat) -> 0 = plus x x -> x = 0
+zEqPlusXX Z p = Refl
+zEqPlusXX (S a) p = absurd (zNotS p)
+
+bin2NatOIsNotBNil : (b : Nat) -> (z : Bin) -> bin2Nat (O b z) = 0 -> Void
+bin2NatOIsNotBNil Z BNil Refl impossible
+bin2NatOIsNotBNil (S v) BNil p =
+  let
+    pzero : (bin2Nat (O v BNil) = 0)
+    pzero = plusXXEqZ (bin2Nat (O v BNil)) p
+  in
+  absurd (bin2NatOIsNotBNil v BNil pzero)
+bin2NatOIsNotBNil Z (O s t) p = absurd (sNotZ p)
+bin2NatOIsNotBNil (S v) (O s t) p =
+  let
+    pzero : (bin2Nat (O v (O s t)) = 0)
+    pzero = plusXXEqZ (bin2Nat (O v (O s t))) p
+  in
+  absurd (bin2NatOIsNotBNil v (O s t) pzero)
+
+swapEqNat : (a : Nat) -> (b : Nat) -> a = b -> b = a
+swapEqNat Z Z p = Refl
+swapEqNat (S a) Z p = absurd (sNotZ p)
+swapEqNat Z (S b) p = absurd (zNotS p)
+swapEqNat (S a) (S b) p =
+  rewrite p in
+  Refl
+
+swapEqBin : (a : Bin) -> (b : Bin) -> a = b -> b = a
+swapEqBin BNil BNil p = Refl
+swapEqBin (O s t) BNil p = absurd (oNotBNil p)
+swapEqBin BNil (O x y) p = absurd (bNilNotO p)
+swapEqBin (O s t) (O x y) p =
+  rewrite p in
+  Refl
+
+bin2NatOIsNotBNil2 : (b : Nat) -> (z : Bin) -> 0 = bin2Nat (O b z) -> Void
+bin2NatOIsNotBNil2 Z BNil Refl impossible
+bin2NatOIsNotBNil2 (S v) x p =
+  let
+    ip : (plus (bin2Nat (O v x)) (bin2Nat (O v x)) = 0)
+    ip = swapEqNat 0 (plus (bin2Nat (O v x)) (bin2Nat (O v x))) p
+
+    pzero : (bin2Nat (O v x) = 0)
+    pzero = plusXXEqZ (bin2Nat (O v x)) ip
+  in
+  absurd (bin2NatOIsNotBNil v x pzero)
+
+plusAAEqPlusBBMeansAEqB : (a : Nat) -> (b : Nat) -> (plus a a = plus b b) -> (a = b)
+plusAAEqPlusBBMeansAEqB Z Z p = Refl
+plusAAEqPlusBBMeansAEqB (S a) Z p impossible
+plusAAEqPlusBBMeansAEqB Z (S b) p impossible
+plusAAEqPlusBBMeansAEqB (S a) (S b) p =
+  let
+    p1 : (S (S (plus a a)) = S (S (plus b b)))
+    p1 =
+      rewrite add2NEqNP2 a a in
+      rewrite add2NEqNP2 b b in
+      p
+
+    p2 : (S (plus a a) = S (plus b b))
+    p2 = eqs (S (plus a a)) (S (plus b b)) p1
+
+    p3 : (plus a a = plus b b)
+    p3 = eqs (plus a a) (plus b b) p2
+  in
+  rewrite plusAAEqPlusBBMeansAEqB a b p3 in
+  Refl
+
+public export
+oddNotEqualEven : (a : Nat) -> (b : Nat) -> (S (plus a a) = plus b b) -> Void
+oddNotEqualEven Z Z p impossible
+oddNotEqualEven Z (S b) p =
+  let
+    p1 : (1 = S (S (plus b b)))
+    p1 =
+      rewrite add2NEqNP2 b b in
+      p
+
+    p2 : (Z = S (plus b b))
+    p2 =
+      eqs Z (S (plus b b)) p1
+  in
+  zNotS p2
+oddNotEqualEven (S a) Z p = sNotZ p
+oddNotEqualEven (S a) (S b) p =
+  let
+    p1 : (S (plus a (S a)) = plus b (S b))
+    p1 = eqs (S (plus a (S a))) (plus b (S b)) p
+
+    p2 : (S (S (plus a a)) = S (plus b b))
+    p2 =
+      rewrite add2NEqNP2 a a in
+      rewrite add2NEqNP2 b b in
+      p1
+
+    p3 : (S (plus a a) = plus b b)
+    p3 = eqs (S (plus a a)) (plus b b) p2
+  in
+  oddNotEqualEven a b p3
+
+public export
+binIncOneMoreIsO0 : (b : Bin) -> binInc (oneMore b) = O 0 b
+binIncOneMoreIsO0 BNil = Refl
+binIncOneMoreIsO0 (O x y) = Refl
+
+public export
+anyYO0NotBNil : (y : Bin) -> O 0 y = BNil -> Void
+anyYO0NotBNil BNil Refl impossible
+anyYO0NotBNil (O f g) Refl impossible
+
+public export
+oneMoreNETwoMore : (s : Nat) -> (t : Bin) -> oneMore (O s t) = oneMore (oneMore (O s t)) -> Void
+oneMoreNETwoMore Z BNil Refl impossible
+oneMoreNETwoMore Z (O s t) Refl impossible
+oneMoreNETwoMore (S x) BNil Refl impossible
+oneMoreNETwoMore (S x) (O s t) Refl impossible
+
+public export
+collapseEqTail : (c : Nat) -> (d : Nat) -> (b : Bin) -> (q : Bin) -> (O c b = O d q) -> (b = q)
+collapseEqTail c d b q p =
+  let
+    (_, tailProof) = O_injective p
+  in
+  tailProof
+
+public export
+reverseProof : (a = b) -> (b = a)
+reverseProof Refl = Refl
+
+public export
+o0BNilN1 : O 0 BNil = O 1 BNil -> Void
+o0BNilN1 Refl impossible
+
+public export
+oneLessShift : (f : Nat) -> (e : Bin) -> (g : Bin) -> (O (S f) e) = (O (S f) g) -> (O f e = O f g)
+oneLessShift Z BNil BNil p = Refl
+oneLessShift Z BNil (O x y) Refl impossible
+oneLessShift Z (O s t) BNil Refl impossible
+oneLessShift Z (O s t) (O x y) p =
+  let
+    proofTEqY : (O s t = O x y)
+    proofTEqY = collapseEqTail 1 1 (O s t) (O x y) p
+  in
+  rewrite proofTEqY in
+  Refl
+oneLessShift (S a) BNil BNil p = Refl
+oneLessShift (S a) BNil (O x y) Refl impossible
+oneLessShift (S a) (O s t) BNil Refl impossible
+oneLessShift (S a) (O s t) (O x y) p =
+  let
+    p2 : (O (S a) (O s t) = O (S a) (O x y))
+    p2 =
+      let
+        (shiftEq, tailEq) = O_injective p
+        reducedShiftEq = eqs (S a) (S a) shiftEq
+      in
+      O_bijective reducedShiftEq tailEq
+  in
+  p2
+
+public export
+shiftIsEqual : (c : Nat) -> (d : Nat) -> (b : Bin) -> (q : Bin) -> O c b = O d q -> c = d
+shiftIsEqual Z Z b q p = Refl
+shiftIsEqual Z (S d) b q p impossible
+shiftIsEqual (S c) Z b q p impossible
+shiftIsEqual (S c) (S d) b q p with (decEq b q)
+  shiftIsEqual (S c) (S d) b q p | Yes prf =
+    let
+      (scEqsd, _) = O_injective p
+    in
+    scEqsd
+  shiftIsEqual (S c) (S d) b q p | No contra =
+    let
+      brokenEq : ((S c = S d), (b = q))
+      brokenEq = O_injective p
+    in
+    let
+      (_, eqTail) = brokenEq
+    in
+    absurd (contra eqTail)
+
+public export
+canEqualizeShift : (c : Nat) -> (d : Nat) -> (b : Bin) -> (q : Bin) -> (O c b = O d q) -> (O c b = O c q)
+canEqualizeShift c d b q p =
+  let
+    brokenProof : ((c = d), (b = q))
+    brokenProof = O_injective p
+  in
+  let
+    (shiftEq, tailEq) = brokenProof
+  in
+  O_bijective Refl tailEq
+
+public export
+xEqYMeansBin2NatXEqBin2NatY : (x : Bin) -> (y : Bin) -> (x = y) -> (bin2Nat x = bin2Nat y)
+xEqYMeansBin2NatXEqBin2NatY BNil BNil p = Refl
+xEqYMeansBin2NatXEqBin2NatY (O s t) BNil p =
+  absurd (oNotBNil p)
+xEqYMeansBin2NatXEqBin2NatY BNil (O u v) p =
+  absurd (bnilNotO u v p)
+xEqYMeansBin2NatXEqBin2NatY (O s t) (O u v) p =
+  rewrite p in
+  Refl
+
+public export
+tailNotMatch : (u : Nat) -> (v : Bin) -> O 0 (O u v) = O 0 BNil -> Void
+tailNotMatch Z BNil p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (oNotBNil tailProof)
+tailNotMatch (S u) BNil p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (oNotBNil tailProof)
+tailNotMatch Z (O x y) p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (oNotBNil tailProof)
+tailNotMatch (S u) (O x y) p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (oNotBNil tailProof)
+
+public export
+oneMoreFlipFromLeftGreaterThanOne : (n : Nat) -> (b : Bin) -> (oneMore (flipFromLeft (O n b)) = O 0 BNil) -> Void
+oneMoreFlipFromLeftGreaterThanOne Z BNil p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (sNotZ shiftProof)
+oneMoreFlipFromLeftGreaterThanOne Z (O u v) p with (oneMore (flipFromLeft (O u v)))
+  oneMoreFlipFromLeftGreaterThanOne Z (O u v) p | BNil = bnilNotO 0 BNil p
+  oneMoreFlipFromLeftGreaterThanOne Z (O u v) p | (O e f) =
+    let
+      (shiftProof, tailProof) = O_injective p
+    in
+    absurd (sNotZ shiftProof)
+oneMoreFlipFromLeftGreaterThanOne (S n) BNil p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (sNotZ shiftProof)
+oneMoreFlipFromLeftGreaterThanOne (S n) (O u v) p =
+  let
+    (shiftProof, tailProof) = O_injective p
+  in
+  absurd (sNotZ shiftProof)
+
+mutual
+  public export
+  flipFromLeftNotBNil : (n : Nat) -> (b : Bin) -> flipFromLeft (O n b) = BNil -> Void
+  flipFromLeftNotBNil Z BNil p = absurd (oNotBNil p)
+  flipFromLeftNotBNil Z (O u v) p =
+    absurd (oneMoreFlipFromLeftGreaterThanZero u v p)
+  flipFromLeftNotBNil (S n) b p =
+    absurd (oNotBNil p)
+
+  public export
+  oneMoreFlipFromLeftGreaterThanZero : (n : Nat) -> (b : Bin) -> (oneMore (flipFromLeft (O n b)) = BNil) -> Void
+  oneMoreFlipFromLeftGreaterThanZero Z BNil p =
+    absurd (oNotBNil p)
+  oneMoreFlipFromLeftGreaterThanZero Z (O e f) p with (decEq (flipFromLeft (O e f)) BNil)
+    oneMoreFlipFromLeftGreaterThanZero Z (O e f) p | Yes prf =
+      absurd (flipFromLeftNotBNil e f prf)
+    oneMoreFlipFromLeftGreaterThanZero Z (O e f) p | No contra =
+      let
+        bprf : (BNil = oneMore BNil)
+        bprf = Refl
+
+        p1 : (oneMore (oneMore (flipFromLeft (O e f))) = oneMore BNil)
+        p1 =
+          rewrite bprf in
+          p
+
+        p2 : (oneMore (flipFromLeft (O e f)) = BNil)
+        p2 = oneMoreYEq (oneMore (flipFromLeft (O e f))) BNil p1
+
+        p3 : (oneMore (flipFromLeft (O e f)) = oneMore BNil)
+        p3 =
+          rewrite bprf in
+          p2
+
+        p4 : flipFromLeft (O e f) = BNil
+        p4 = oneMoreYEq (flipFromLeft (O e f)) BNil p3
+      in
+      absurd (flipFromLeftNotBNil e f p4)
+  oneMoreFlipFromLeftGreaterThanZero (S n) BNil p =
+    absurd (oNotBNil p)
+  oneMoreFlipFromLeftGreaterThanZero (S n) (O e f) p =
+    absurd (oNotBNil p)
+
+  public export
+  binIncUVNotEqO0BNil : (u : Nat) -> (v : Bin) -> (binInc (O u v) = O 0 BNil) -> Void
+  binIncUVNotEqO0BNil Z BNil p impossible
+  binIncUVNotEqO0BNil Z (O e f) p =
+    absurd (oneMoreFlipFromLeftGreaterThanOne e f p)
+  binIncUVNotEqO0BNil (S u) BNil p = tailNotMatch u BNil p
+  binIncUVNotEqO0BNil (S u) (O g h) p = tailNotMatch u (O g h) p
+
+  public export
+  binIncCantYieldZero : (b : Bin) -> (binInc b = BNil) -> Void
+  binIncCantYieldZero BNil p = oNotBNil p
+  binIncCantYieldZero (O Z BNil) p = oNotBNil p
+  binIncCantYieldZero (O Z (O e f)) p =
+    absurd (oneMoreFlipFromLeftGreaterThanZero e f p)
+  binIncCantYieldZero (O (S x) y) p = oNotBNil p
+
+  public export
+  binIncBNilEqOZBNil : binInc BNil = O Z BNil
+  binIncBNilEqOZBNil = Refl
+
+  public export
+  binIncCantBeOne : (n : Nat) -> (b : Bin) -> binInc (O n b) = O Z BNil -> Void
+  binIncCantBeOne Z BNil p =
+    let
+      (shiftProof, tailProof) = O_injective p
+    in
+    absurd (sNotZ shiftProof)
+  binIncCantBeOne Z (O x y) p =
+    absurd (oneMoreFlipFromLeftGreaterThanOne x y p)
+  binIncCantBeOne (S n) BNil p =
+    let
+      (shiftProof, tailProof) = O_injective p
+    in
+    absurd (oNotBNil tailProof)
+  binIncCantBeOne (S n) (O x y) p =
+    let
+      (shiftProof, tailProof) = O_injective p
+    in
+    absurd (oNotBNil tailProof)
+
+  public export
+  flipFromLeftNeverZero : (n : Nat) -> (b : Bin) -> flipFromLeft (O n b) = BNil -> Void
+  flipFromLeftNeverZero Z BNil p = absurd (oNotBNil p)
+  flipFromLeftNeverZero Z (O x y) p =
+    absurd (oneMoreFlipFromLeftGreaterThanZero x y p)
+  flipFromLeftNeverZero (S n) BNil p = absurd (oNotBNil p)
+  flipFromLeftNeverZero (S n) (O x y) p = absurd (oNotBNil p)
+
+  public export
+  binIncZeroIsO0BNil : (b : Bin) -> binInc b = O 0 BNil -> b = BNil
+  binIncZeroIsO0BNil BNil p = Refl
+  binIncZeroIsO0BNil (O a x) p = absurd (binIncCantBeOne a x p)
+
+  public export
+  canRemoveBinInc1 : (s : Nat) -> (t : Bin) -> (u : Nat) -> (v : Bin) -> (e : Nat) -> (f : Bin) -> (binInc (O s t) = binInc (O u v)) -> (O e f = binInc (O s t)) -> (O e f = binInc (O u v))
+  canRemoveBinInc1 s t u v Z BNil p lp =
+    absurd (binIncCantBeOne s t (reverseProof lp))
+  canRemoveBinInc1 Z BNil Z v Z (O x y) p lp =
+    let
+      (shiftProof, tailProof) = O_injective lp
+    in
+    absurd (zNotS shiftProof)
+  canRemoveBinInc1 Z BNil (S u) v Z (O x y) p lp =
+    let
+      (shiftProof, tailProof) = O_injective lp
+    in
+    absurd (zNotS shiftProof)
+  canRemoveBinInc1 Z (O Z t1) Z BNil Z (O x y) p lp =
+    let
+      p1 : (O 0 (O x y) = O 1 BNil)
+      p1 =
+        rewrite lp in
+        p
+    in
+    let
+      (shiftProof, tailProof) = O_injective p1
+    in
+    absurd (zNotS shiftProof)
+  canRemoveBinInc1 Z (O (S t0) t1) Z BNil Z (O x y) p lp =
+    let
+      (shiftProof, tailProof) = O_injective lp
+    in
+    absurd (zNotS shiftProof)
+  canRemoveBinInc1 Z (O t0 t1) Z (O v0 v1) Z (O x y) p lp =
+    rewrite lp in
+    p
+  canRemoveBinInc1 Z (O t0 t1) (S u) v Z (O x y) p lp =
+    rewrite lp in
+    p
+  canRemoveBinInc1 (S s) BNil u v Z (O x y) p lp =
+    rewrite lp in
+    p
+  canRemoveBinInc1 (S s) (O t0 t1) u v Z (O x y) p lp =
+    rewrite lp in
+    p
+  canRemoveBinInc1 s t u v (S e) f p lp =
+    rewrite lp in
+    p
+
+  public export
+  oneMoreShiftsOne : (b : Bin) -> (v : Bin) -> (O 1 b = oneMore v) -> (O 0 b = v)
+  oneMoreShiftsOne BNil BNil p =
+    absurd (oNotBNil p)
+  oneMoreShiftsOne BNil (O Z y) p =
+    let
+      (_, tailProof) = O_injective p
+    in
+    rewrite tailProof in
+    Refl
+  oneMoreShiftsOne BNil (O (S x) y) p =
+    let
+      (shiftProof, tailProof) = O_injective p
+    in
+    absurd (zNotS (eqs Z (S x) shiftProof))
+  oneMoreShiftsOne (O e f) v p =
+    let
+      p1 : (oneMore (O 0 (O e f)) = O 1 (O e f))
+      p1 = Refl
+
+      p2 : (oneMore (O 0 (O e f)) = oneMore v)
+      p2 =
+        rewrite p1 in
+        p
+
+      p3 : (O 0 (O e f) = v)
+      p3 = oneMoreYEq (O 0 (O e f)) v p2
+    in
+    p3
+
+  oneMoreNotZeroShift : (b : Bin) -> (v : Bin) -> (O 0 b = oneMore v) -> Void
+  oneMoreNotZeroShift b BNil p =
+    absurd (oNotBNil p)
+  oneMoreNotZeroShift b (O x y) p =
+    let
+      (shiftProof, _) = O_injective p
+    in
+    absurd (zNotS shiftProof)
+
+  flipFromLeftGtrZeroNotOne : (t0 : Nat) -> (t1 : Bin) -> (O Z BNil = flipFromLeft (O t0 t1)) -> Void
+  flipFromLeftGtrZeroNotOne Z t1 p =
+    absurd (oneMoreNotZeroShift BNil (flipFromLeft t1) p)
+  flipFromLeftGtrZeroNotOne (S t0) t1 p =
+    let
+      (_, tailProof) = O_injective p
+    in
+    bnilNotO t0 t1 tailProof
+
+  public export
+  canRemoveFlipFromLeft : (b : Bin) -> (v : Bin) -> flipFromLeft b = flipFromLeft v -> b = v
+  canRemoveFlipFromLeft BNil BNil p =
+    Refl
+  canRemoveFlipFromLeft BNil (O x y) p =
+    absurd (flipFromLeftGtrZeroNotOne x y p)
+  canRemoveFlipFromLeft (O e f) BNil p =
+    absurd (flipFromLeftGtrZeroNotOne e f (reverseProof p))
+  canRemoveFlipFromLeft (O Z f) (O Z y) p =
+    let
+      p1 : (flipFromLeft f = flipFromLeft y)
+      p1 = oneMoreYEq (flipFromLeft f) (flipFromLeft y) p
+
+      fEqY : (f = y)
+      fEqY = canRemoveFlipFromLeft f y p1
+
+      finalProof : (O 0 f = O 0 y)
+      finalProof = O_bijective Refl fEqY
+    in
+    finalProof
+  canRemoveFlipFromLeft (O Z f) (O (S x) y) p =
+    absurd (oneMoreNotZeroShift (O x y) (flipFromLeft f) (reverseProof p))
+  canRemoveFlipFromLeft (O (S e) f) (O Z y) p =
+    absurd (oneMoreNotZeroShift (O e f) (flipFromLeft y) p)
+  canRemoveFlipFromLeft (O (S e) f) (O (S x) y) p =
+    let
+      (_, tailProof1) = O_injective p
+      (eEqX, fEqY) = O_injective tailProof1
+    in
+    rewrite eEqX in
+    rewrite fEqY in
+    Refl
+
+  public export
+  canRemoveBinInc : (a : Bin) -> (b : Bin) -> (binInc a = binInc b) -> (a = b)
+  canRemoveBinInc BNil BNil p = Refl
+  canRemoveBinInc BNil (O u v) p = absurd (binIncUVNotEqO0BNil u v (reverseProof p))
+  canRemoveBinInc (O s t) BNil p = absurd (binIncUVNotEqO0BNil s t p)
+  canRemoveBinInc (O Z BNil) (O Z BNil) p = Refl
+  canRemoveBinInc (O Z BNil) (O Z (O Z BNil)) p =
+    let
+      (shiftProof, _) = O_injective p
+    in
+    absurd (oneIsNotTwo shiftProof)
+  canRemoveBinInc (O Z BNil) (O Z (O Z (O x y))) p =
+    let
+      omProof : (O Z BNil = oneMore (flipFromLeft (O x y)))
+      omProof = oneMoreShiftsOne BNil (oneMore (flipFromLeft (O x y))) p
+    in
+    absurd (oneMoreNotZeroShift BNil (flipFromLeft (O x y)) omProof)
+  canRemoveBinInc (O Z BNil) (O Z (O (S v0) v1)) p =
+    let
+      (_, tailProof) = O_injective p
+    in
+    absurd (bnilNotO v0 v1 tailProof)
+  canRemoveBinInc (O Z (O t0 t1)) (O Z BNil) p =
+    let
+      omProof : (O Z BNil = flipFromLeft (O t0 t1))
+      omProof = oneMoreShiftsOne BNil (flipFromLeft (O t0 t1)) (reverseProof p)
+    in
+    absurd (flipFromLeftGtrZeroNotOne t0 t1 omProof)
+  canRemoveBinInc (O Z (O t0 t1)) (O Z (O v0 v1)) p =
+    let
+      p1 : (flipFromLeft (O t0 t1) = flipFromLeft (O v0 v1))
+      p1 = oneMoreYEq (flipFromLeft (O t0 t1)) (flipFromLeft (O v0 v1)) p
+
+      p2 : (O t0 t1 = O v0 v1)
+      p2 = canRemoveFlipFromLeft (O t0 t1) (O v0 v1) p1
+    in
+    rewrite p2 in
+    Refl
+  canRemoveBinInc (O Z (O t0 t1)) (O (S u) v) p =
+    absurd (oneMoreNotZeroShift (O u v) (flipFromLeft (O t0 t1)) (reverseProof p))
+  canRemoveBinInc (O Z BNil) (O (S u) v) p =
+    let
+      (shiftProof, _) = O_injective p
+    in
+    absurd (sNotZ shiftProof)
+  canRemoveBinInc (O (S s) t) (O Z BNil) p =
+    let
+      (shiftProof, _) = O_injective p
+    in
+    absurd (zNotS shiftProof)
+  canRemoveBinInc (O (S s) t) (O Z (O v0 v1)) p =
+    absurd (oneMoreNotZeroShift (O s t) (flipFromLeft (O v0 v1)) p)
+  canRemoveBinInc (O (S s) t) (O (S u) v) p =
+    let
+      (_, tailProof) = O_injective p
+      (sEqU, tEqV) = O_injective tailProof
+    in
+    rewrite sEqU in
+    rewrite tEqV in
+    Refl
+
+  public export
+  canReduceO0WithBinInc : (n : Nat) -> (b : Bin) -> (O 0 (O n b) = binInc (O (S n) b))
+  canReduceO0WithBinInc n b = Refl
+
+  public export
+  canReduceO1WithBinInc : (n : Nat) -> (b : Bin) -> (O 1 (O n b)) = oneMore (binInc (O (S n) b))
+  canReduceO1WithBinInc Z b = Refl
+  canReduceO1WithBinInc (S n) b = Refl
+
+  public export
+  oneMoreBinIncIs2Plus2X : (b : Bin) -> oneMore (binInc b) = binInc (binInc (oneMore b))
+  oneMoreBinIncIs2Plus2X BNil = Refl
+  oneMoreBinIncIs2Plus2X (O Z BNil) = Refl
+  oneMoreBinIncIs2Plus2X (O Z (O x y)) = Refl
+  oneMoreBinIncIs2Plus2X (O (S e) f) = Refl
+
+  public export
+  oZBIsBinIncN2BPlusBB : (b : Bin) -> O 0 b = binInc (nat2Bin (plus (bin2Nat b) (bin2Nat b)))
+  oZBIsBinIncN2BPlusBB BNil = Refl
+  oZBIsBinIncN2BPlusBB (O Z BNil) = Refl
+  oZBIsBinIncN2BPlusBB (O Z (O Z y)) =
+    rewrite sym (oneMoreXIs2X y) in
+    rewrite sym (add2NEqNP2 (bin2Nat (oneMore y)) (bin2Nat (oneMore y))) in
+    rewrite sym (add2NEqNP2 (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y))) (S (S (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y)))))) in
+    rewrite sym (add2NEqNP2 (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y))) (S (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y))))) in
+    rewrite sym (add2NEqNP2 (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y))) (plus (bin2Nat (oneMore y)) (bin2Nat (oneMore y)))) in
+    rewrite sym (oneMoreXIs2X (oneMore y)) in
+    rewrite sym (oneMoreXIs2X (oneMore (oneMore y))) in
+    let
+      p2 : (binInc (O 1 (O 0 y)) = (O 0 (O 0 (O 0 y))))
+      p2 = canReduceO0WithBinInc Z (O 0 y)
+
+      p3 : (oneMore (binInc (O 1 y)) = (O 1 (O 0 y)))
+      p3 = canReduceO1WithBinInc Z y
+
+      p4 : (binInc (oneMore (binInc (O 1 y))) = (O 0 (O 0 (O 0 y))))
+      p4 =
+        rewrite p2 in
+        Refl
+
+      p5 : (oneMore (binInc (O 1 y)) = binInc (binInc (oneMore (O 1 y))))
+      p5 = oneMoreBinIncIs2Plus2X (O 1 y)
+
+      p6 : (binInc (binInc (binInc (oneMore (O 1 y)))) = (O 0 (O 0 (O 0 y))))
+      p6 =
+        rewrite p4 in
+        Refl
+
+      p7 : (binInc (binInc (binInc (oneMore (oneMore (O 0 y))))) = (O 0 (O 0 (O 0 y))))
+      p7 = Refl
+
+      p8 : (O 0 y = binInc (oneMore y))
+      p8 = reverseProof (binIncOneMoreIsO0 y)
+
+      p9 : (binInc (binInc (binInc (oneMore (oneMore (binInc (oneMore y)))))) = (O 0 (O 0 (O 0 y))))
+      p9 =
+        rewrite p7 in
+        rewrite p8 in
+        rewrite sym (canReduceO0WithBinInc 0 (binInc (oneMore y))) in
+        rewrite sym p8 in
+        Refl
+    in
+    rewrite sym p9 in
+    rewrite oneMoreBinIncIs2Plus2X (oneMore y) in
+    rewrite oneMoreBinIncIs2Plus2X (binInc (oneMore (oneMore y))) in
+    rewrite oneMoreBinIncIs2Plus2X (oneMore (oneMore y)) in
+    rewrite sym (assert_total (nat2BinIsReflexiveWithBin2Nat (oneMore (oneMore (oneMore y))))) in
+    Refl
+
+  oZBIsBinIncN2BPlusBB (O Z (O (S x) y)) =
+    let
+      p1 : (O 0 (O 0 (O (S x) y)) = binInc (binInc (binInc (oneMore (oneMore (oneMore (O x y)))))))
+      p1 =
+        Refl
+    in
+    rewrite p1 in
+    rewrite sym (oneMoreXIs2X (O x y)) in
+    rewrite sym (oneMoreXIs2X (oneMore (O x y))) in
+    rewrite sym (add2NEqNP2 (bin2Nat (oneMore (oneMore (O x y)))) (bin2Nat (oneMore (oneMore (O x y))))) in
+    rewrite sym (oneMoreXIs2X (oneMore (oneMore (O x y)))) in
+    rewrite sym (assert_total (nat2BinIsReflexiveWithBin2Nat (oneMore (oneMore (oneMore (O x y)))))) in
+    Refl
+
+  oZBIsBinIncN2BPlusBB (O (S x) y) =
+    let
+      p1 : (O 0 (O (S x) y) = binInc (oneMore (oneMore (O x y))))
+      p1 =
+        Refl
+    in
+    rewrite p1 in
+    rewrite sym (oneMoreXIs2X (O x y)) in
+    rewrite sym (oneMoreXIs2X (oneMore (O x y))) in
+    rewrite sym (assert_total (nat2BinIsReflexiveWithBin2Nat (oneMore (oneMore (O x y))))) in
+    Refl
+
+  public export
+  oneMoreYEq : (y : Bin) -> (t : Bin) -> oneMore y = oneMore t -> y = t
+  oneMoreYEq BNil BNil p = Refl
+  oneMoreYEq BNil (O m y) Refl impossible
+  oneMoreYEq (O s t) BNil Refl impossible
+  oneMoreYEq (O Z t) (O Z y) p =
+    rewrite oZBIsBinIncN2BPlusBB t in
+    rewrite oZBIsBinIncN2BPlusBB y in
+    rewrite sym (oneMoreXIs2X t) in
+    rewrite sym (oneMoreXIs2X y) in
+    rewrite sym (nat2BinIsReflexiveWithBin2Nat (oneMore t)) in
+    rewrite sym (nat2BinIsReflexiveWithBin2Nat (oneMore y)) in
+    rewrite collapseEqTail 1 1 t y p in
+    Refl
+  oneMoreYEq (O Z t) (O (S m) y) _ impossible
+  oneMoreYEq (O (S s) t) (O Z y) p impossible
+  oneMoreYEq (O (S s) h) (O (S m) i) p =
+    let
+      sie1x : (S (S s) = S (S m))
+      sie1x = shiftIsEqual (S (S s)) (S (S m)) h i p
+
+      sierw : (S s = S m)
+      sierw = eqs (S s) (S m) sie1x
+
+      sie2x : (O (S (S s)) h = O (S (S s)) i)
+      sie2x = canEqualizeShift (S (S s)) (S (S m)) h i p
+
+      sie3x : (O (S s) h = O (S s) i)
+      sie3x = oneLessShift (S s) h i sie2x
+    in
+    rewrite sym sierw in
+    sie3x
+
+  public export
+  revYMeansBin2NatXEqBin2NatY : (x : Bin) -> (y : Bin) -> (bin2Nat x = bin2Nat y) -> (x = y)
+  revYMeansBin2NatXEqBin2NatY BNil BNil p = Refl
+  revYMeansBin2NatXEqBin2NatY (O s t) BNil p =
+    let
+      p2 : (0 = bin2Nat (O s t))
+      p2 = reverseProof p
+    in
+    absurd (bin2NatOIsNotBNil2 s t p2)
+  revYMeansBin2NatXEqBin2NatY BNil (O u v) p =
+    absurd (bin2NatOIsNotBNil2 u v p)
+  revYMeansBin2NatXEqBin2NatY (O Z t) (O Z v) p =
+    let
+      p1 : (plus (bin2Nat t) (bin2Nat t) = plus (bin2Nat v) (bin2Nat v))
+      p1 = eqs (plus (bin2Nat t) (bin2Nat t)) (plus (bin2Nat v) (bin2Nat v)) p
+
+      p2 : (bin2Nat t = bin2Nat v)
+      p2 = plusAAEqPlusBBMeansAEqB (bin2Nat t) (bin2Nat v) p1
+
+      p3 : (t = v)
+      p3 = revYMeansBin2NatXEqBin2NatY t v p2
+    in
+    rewrite p3 in
+    Refl
+  revYMeansBin2NatXEqBin2NatY (O Z t) (O (S u) v) p =
+    let
+      p4 : (S (plus (bin2Nat t) (bin2Nat t)) = plus (bin2Nat (O u v)) (bin2Nat (O u v))) -> Void
+      p4 =
+        oddNotEqualEven (bin2Nat t) (bin2Nat (O u v))
+    in
+    absurd (p4 p)
+  revYMeansBin2NatXEqBin2NatY (O (S s) t) (O Z v) p =
+    let
+      p1 : (S (plus (bin2Nat v) (bin2Nat v)) = plus (bin2Nat (O s t)) (bin2Nat (O s t)))
+      p1 = reverseProof p
+    in
+    absurd (oddNotEqualEven (bin2Nat v) (bin2Nat (O s t)) p1)
+  revYMeansBin2NatXEqBin2NatY (O (S s) t) (O (S u) v) p =
+    let
+      p1 : (bin2Nat (O s t) = bin2Nat (O u v))
+      p1 = plusAAEqPlusBBMeansAEqB (bin2Nat (O s t)) (bin2Nat (O u v)) p
+
+      p2 : (O s t = O u v)
+      p2 = assert_total (revYMeansBin2NatXEqBin2NatY (O s t) (O u v) p1)
+
+      p3 : (s = u, t = v)
+      p3 = O_injective p2
+    in
+    let
+      (prfS, prfT) = p3
+    in
+    rewrite prfS in
+    rewrite prfT in
+    Refl
+
+  public export
+  bin2NatCanMove : (x : Bin) -> (a : Nat) -> bin2Nat x = a -> x = nat2Bin a
+  bin2NatCanMove BNil Z p = Refl
+  bin2NatCanMove BNil (S r) p = absurd (zNotS p)
+  bin2NatCanMove (O b z) Z p =
+    let
+      rp : (bin2Nat (O b z) = 0) -> Void
+      rp = bin2NatOIsNotBNil b z
+    in
+    absurd (rp p)
+  bin2NatCanMove (O b z) (S r) p =
+    let
+      r1 : (bin2Nat (O b z) = bin2Nat (binInc (nat2Bin r)))
+      r1 =
+        rewrite sym (testBin2Nat (nat2Bin r)) in
+        rewrite p in
+        rewrite sym (bin2NatIsReflexiveWithNat2Bin r) in
+        Refl
+
+      p1 : (O b z = binInc (nat2Bin r))
+      p1 = revYMeansBin2NatXEqBin2NatY (O b z) (binInc (nat2Bin r)) r1
+    in
+    p1
+
+  public export
+  nat2BinIsReflexiveWithBin2Nat : (b : Bin) -> b = (nat2Bin (bin2Nat b))
+  nat2BinIsReflexiveWithBin2Nat BNil = Refl
+  nat2BinIsReflexiveWithBin2Nat (O Z BNil) = Refl
+  nat2BinIsReflexiveWithBin2Nat (O Z (O a x)) =
+    rewrite oZBIsBinIncN2BPlusBB (O a x) in
+    Refl
+  nat2BinIsReflexiveWithBin2Nat (O (S v) z) =
+    let
+      p1 : (bin2Nat (O (S v) z) = plus (bin2Nat (O v z)) (bin2Nat (O v z)))
+      p1 = plusOaxOaxIsOSax v z
+
+      p2 : ((O (S v) z) = nat2Bin (plus (bin2Nat (O v z)) (bin2Nat (O v z))))
+      p2 = bin2NatCanMove (O (S v) z) (plus (bin2Nat (O v z)) (bin2Nat (O v z))) p1
+    in
+    p2
+
+binShrIsDiv2Nat : (b : Bin) -> binShr b = nat2Bin (div2Nat (bin2Nat b))
+binShrIsDiv2Nat BNil = Refl
+binShrIsDiv2Nat (O Z x) =
+  rewrite div2NatOnePlusAPAIsA (bin2Nat x) in
+  rewrite sym (nat2BinIsReflexiveWithBin2Nat x) in
+  Refl
+binShrIsDiv2Nat (O (S a) x) =
+  rewrite div2NatPlusAAIsA (bin2Nat (O a x)) in
+  rewrite sym (nat2BinIsReflexiveWithBin2Nat (O a x)) in
+  Refl
